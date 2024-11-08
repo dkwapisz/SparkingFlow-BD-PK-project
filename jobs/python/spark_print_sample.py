@@ -1,5 +1,4 @@
 import json
-
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 from airflow.models import Variable
@@ -8,14 +7,17 @@ from airflow.models import Variable
 spark = SparkSession.builder.master('local').appName("PrintSample").getOrCreate()
 
 # Retrieve data from Airflow variable
-data = json.loads(Variable.get("sample_data", default_var="[]"))
-
-print("Retrieved data:")
-print(data)
+sample_data = Variable.get("sample_data", default_var="[]")
+print(f"Retrieved raw data from Airflow variable: {sample_data}")
 
 # Check if data is retrieved and is not empty
-if not data:
+if not sample_data or sample_data == "[]":
     raise ValueError("No data found in Airflow variable 'sample_data'")
+
+# Parse JSON data
+data = json.loads(sample_data)
+print("Parsed data:")
+print(data)
 
 # Define schema
 schema = StructType([
