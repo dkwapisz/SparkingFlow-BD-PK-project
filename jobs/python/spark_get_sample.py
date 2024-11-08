@@ -13,13 +13,17 @@ df = spark.read.option("header", "true").csv("dags/datasets/steam_reviews.csv")
 # Select specific columns
 selected_columns_df = df.select("app_id", "app_name", "language")
 
-# Sample approximately 1000 random rows
-sample_df = df.orderBy(rand()).limit(1000)
+print("Sample dataframe:")
+selected_columns_df.show()
 
-# Convert DataFrame to JSON and save to Airflow Variable
+# Sample approximately 1000 random rows
+sample_df = df.orderBy(rand()).limit(50)
+
+# Convert DataFrame to list of dictionaries
 sample_data_json = sample_df.toJSON().collect()
-json_string = json.dumps(sample_data_json)
-Variable.set("sample_data", json_string)
+print(f"Sample data JSON: {sample_data_json}")
+
+Variable.set("sample_data", sample_data_json)
 
 # Stop Spark session
 spark.stop()
