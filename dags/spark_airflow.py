@@ -35,13 +35,6 @@ make_partition_job = SparkSubmitOperator(
     dag=dag
 )
 
-# print_job = SparkSubmitOperator(
-#     task_id="print_sample_job",
-#     conn_id="spark-conn",
-#     application="jobs/python/spark_print_sample.py",
-#     dag=dag
-# )
-
 end = PythonOperator(
     task_id="end",
     python_callable=lambda: print("Jobs completed successfully"),
