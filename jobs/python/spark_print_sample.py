@@ -24,6 +24,6 @@ schema = StructType([
 df = spark.read.json(spark.sparkContext.parallelize(data), schema=schema)
 
 print("Final dataframe:")
-df.show()
+print(df.collect())
 
 spark.stop()
