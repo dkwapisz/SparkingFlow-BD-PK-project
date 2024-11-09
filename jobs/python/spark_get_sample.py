@@ -5,7 +5,7 @@ from pyspark.sql import SparkSession, functions as fun
 
 spark = SparkSession.builder.master('local').appName("GetSample").getOrCreate()
 
-df = spark.read.option("header", "true").csv("dags/datasets/steam_reviews.csv")
+df = spark.read.option("header", "true").option("quote", '"').csv("dags/datasets/steam_reviews.csv")
 
 selected_df = df.select("app_id", "app_name", "language")
 

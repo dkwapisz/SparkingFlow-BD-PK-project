@@ -6,10 +6,17 @@ from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOpe
 dag = DAG(
     dag_id="sparking_flow",
     default_args={
-        "owner": "Yusuf Ganiyu",
+        "owner": "Grupa C - Steam Reviews",
         "start_date": airflow.utils.dates.days_ago(1)
     },
     schedule_interval="@daily"
+)
+
+health_check = SparkSubmitOperator(
+    task_id="health_check",
+    conn_id="spark-conn",
+    application="jobs/python/wordcountjob.py",
+    dag=dag
 )
 
 start = PythonOperator(
@@ -38,4 +45,4 @@ end = PythonOperator(
     dag=dag
 )
 
-start >> python_job >> print_job >> end
+start >> health_check >> python_job >> print_job >> end
