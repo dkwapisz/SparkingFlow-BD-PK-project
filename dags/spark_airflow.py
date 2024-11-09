@@ -12,6 +12,12 @@ dag = DAG(
     schedule_interval="@daily"
 )
 
+start = PythonOperator(
+    task_id="start",
+    python_callable=lambda: print("Jobs started"),
+    dag=dag
+)
+
 health_check = SparkSubmitOperator(
     task_id="health_check",
     conn_id="spark-conn",
@@ -19,16 +25,13 @@ health_check = SparkSubmitOperator(
     dag=dag
 )
 
-start = PythonOperator(
-    task_id="start",
-    python_callable=lambda: print("Jobs started"),
-    dag=dag
-)
-
 make_partition_job = SparkSubmitOperator(
     task_id="make_partition",
     conn_id="spark-conn",
     application="jobs/python/spark_make_partition.py",
+    application_args=["--input_path", "/opt/data/steam_reviews.csv",
+                      "--num_partition", "10",
+                      "--output_path", "/opt/data/bronze"],
     dag=dag
 )
 
