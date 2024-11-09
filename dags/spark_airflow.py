@@ -29,7 +29,7 @@ make_partition_job = SparkSubmitOperator(
     task_id="make_partition",
     conn_id="spark-conn",
     application="jobs/python/spark_make_partition.py",
-    application_args=["--input_path", "/opt/data/steam_reviews.csv",
+    application_args=["--input_path", "/opt/data/source/steam_reviews.csv",
                       "--num_partition", "10",
                       "--output_path", "/opt/data/bronze"],
     dag=dag
