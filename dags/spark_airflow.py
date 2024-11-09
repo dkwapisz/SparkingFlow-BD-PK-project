@@ -15,7 +15,7 @@ dag = DAG(
 health_check = SparkSubmitOperator(
     task_id="health_check",
     conn_id="spark-conn",
-    application="jobs/python/wordcountjob.py",
+    application="jobs/python/healthcheck_wordcount.py",
     dag=dag
 )
 
