@@ -4,7 +4,7 @@ x-spark-common: &spark-common
   image: bitnami/spark:3.4.2
   volumes:
     - ./jobs:/opt/bitnami/spark/jobs
-    - ./data:/opt/data
+    - ./data:/opt/airflow/data
   networks:
     - code-with-yu
 
@@ -18,7 +18,7 @@ x-airflow-common: &airflow-common
     - ./jobs:/opt/airflow/jobs
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
-    - ./data:/opt/data
+    - ./data:/opt/airflow/data
   depends_on:
     - postgres
   networks:
