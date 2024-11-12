@@ -7,6 +7,7 @@ x-spark-common: &spark-common
     - ./data:/opt/airflow/data
   networks:
     - code-with-yu
+  user: root
 
 x-airflow-common: &airflow-common
   build:
@@ -23,6 +24,7 @@ x-airflow-common: &airflow-common
     - postgres
   networks:
     - code-with-yu
+  user: root
 
 services:
   spark-master:
@@ -84,6 +86,7 @@ services:
       - POSTGRES_DB=airflow
     networks:
       - code-with-yu
+    user: root
 
   webserver:
     <<: *airflow-common
@@ -92,6 +95,7 @@ services:
       - "8080:8080"
     depends_on:
       - scheduler
+    user: root
 
   scheduler:
     <<: *airflow-common
