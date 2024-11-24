@@ -3,6 +3,10 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
+source_path = "/opt/airflow/data/source/"
+bronze_path = "/opt/airflow/data/bronze/"
+silver_path = "/opt/airflow/data/silver/"
+
 dag = DAG(
     dag_id="sparking_flow",
     default_args={
@@ -25,13 +29,40 @@ health_check = SparkSubmitOperator(
     dag=dag
 )
 
-make_partition_job = SparkSubmitOperator(
-    task_id="make_partition",
+load_sample_job = SparkSubmitOperator(
+    task_id="load_sample",
     conn_id="spark-conn",
-    application="jobs/python/spark_make_partition.py",
-    application_args=["--input_path", "/opt/airflow/data/source/steam_reviews.csv",
-                      "--num_partition", "10",
-                      "--output_path", "/opt/airflow/data/bronze"],
+    application="jobs/python/load_sample.py",
+    application_args=["--source_path", source_path,
+                      "--num_partition", "80",
+                      "--bronze_path", bronze_path],
+    dag=dag
+)
+
+load_games_to_bronze_job = SparkSubmitOperator(
+    task_id="load_games_to_bronze",
+    conn_id="spark-conn",
+    application="jobs/python/load_games_to_bronze.py",
+    application_args=["--source_path", source_path,
+                      "--bronze_path", bronze_path],
+    dag=dag
+)
+
+partition_data_job = SparkSubmitOperator(
+    task_id="partition_data",
+    conn_id="spark-conn",
+    application="jobs/python/partition_data.py",
+    application_args=["--bronze_path", bronze_path,
+                      "--silver_path", silver_path],
+    dag=dag
+)
+
+include_games_data_job = SparkSubmitOperator(
+    task_id="include_games_data",
+    conn_id="spark-conn",
+    application="jobs/python/include_games_data.py",
+    application_args=["--bronze_path", bronze_path,
+                      "--silver_path", silver_path],
     dag=dag
 )
 
@@ -41,4 +72,4 @@ end = PythonOperator(
     dag=dag
 )
 
-start >> health_check >> make_partition_job >> end
+start >> health_check >> load_sample_job >> load_games_to_bronze_job >> partition_data_job >> include_games_data_job >> end
