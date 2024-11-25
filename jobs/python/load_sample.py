@@ -15,21 +15,21 @@ input_path = args.source_path + "steam_reviews.csv"
 output_path = args.bronze_path + "steam_reviews"
 num_partition = args.num_partition
 
-print(f"Starting to split {input_path} into {num_partition} partitions")
-print(f"Output directory: {output_path}")
-
-df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='"')
-
-df_repartitioned = df.repartition(num_partition)
-
-first_partition = df_repartitioned.rdd.glom().filter(lambda x: len(x) > 0).take(1)
-
-df_first_partition = spark.createDataFrame(first_partition[0], df_repartitioned.schema)
-
-df_first_partition = df_first_partition.coalesce(1)
-
-df_first_partition.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
-
-print("Repartitioning completed")
+# print(f"Starting to split {input_path} into {num_partition} partitions")
+# print(f"Output directory: {output_path}")
+#
+# df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='"')
+#
+# df_repartitioned = df.repartition(num_partition)
+#
+# first_partition = df_repartitioned.rdd.glom().filter(lambda x: len(x) > 0).take(1)
+#
+# df_first_partition = spark.createDataFrame(first_partition[0], df_repartitioned.schema)
+#
+# df_first_partition = df_first_partition.coalesce(1)
+#
+# df_first_partition.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+#
+# print("Repartitioning completed")
 
 spark.stop()

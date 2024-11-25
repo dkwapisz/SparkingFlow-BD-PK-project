@@ -13,12 +13,12 @@ args = parser.parse_args()
 input_path = args.source_path + "games.csv"
 output_path = args.bronze_path + "games"
 
-df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='"')
-
-df = df.coalesce(1)
-
-df.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
-
-print("Loaded games to Bronze layer")
+# df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='"')
+#
+# df = df.coalesce(1)
+#
+# df.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+#
+# print("Loaded games to Bronze layer")
 
 spark.stop()

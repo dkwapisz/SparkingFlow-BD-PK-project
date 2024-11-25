@@ -21,20 +21,20 @@ output_path = args.silver_path + "steam_reviews"
 #     'finnish', 'japanese', 'korean', 'portuguese', 'swedish',
 #     'norwegian', 'danish', 'romanian']
 
-for file_name in os.listdir(input_path):
-    if file_name.endswith(".csv"):
-        input_file_path = os.path.join(input_path, file_name)
-
-        print(f"Processing file: {input_file_path}")
-
-        df = spark.read.csv(input_file_path, header=True, multiLine=True, quote='"', escape='"')
-
-        if 'language' in df.columns:
-            df = df.coalesce(1)
-            df.write.partitionBy("language").csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
-
-        else:
-            print(f"File {input_file_path} does not contain 'language' column. Skipping.")
-
-print("Repartitioning completed")
+# for file_name in os.listdir(input_path):
+#     if file_name.endswith(".csv"):
+#         input_file_path = os.path.join(input_path, file_name)
+#
+#         print(f"Processing file: {input_file_path}")
+#
+#         df = spark.read.csv(input_file_path, header=True, multiLine=True, quote='"', escape='"')
+#
+#         if 'language' in df.columns:
+#             df = df.coalesce(1)
+#             df.write.partitionBy("language").csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+#
+#         else:
+#             print(f"File {input_file_path} does not contain 'language' column. Skipping.")
+#
+# print("Repartitioning completed")
 spark.stop()
