@@ -33,8 +33,10 @@ df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='
 
 rdd = df.rdd.map(lambda row: (row["app_id"], row["review"], translate_review(row["review"])))
 
-df_translated = rdd.toDF(["app_id", "review", "translated_reviews"])
+print(rdd.take(5))
 
-df_translated.write.partitionBy("app_id").csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+# df_translated = rdd.toDF(["app_id", "review", "translated_reviews"])
+#
+# df_translated.write.partitionBy("app_id").csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
 
 spark.stop()
