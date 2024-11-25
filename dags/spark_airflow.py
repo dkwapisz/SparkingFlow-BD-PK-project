@@ -60,7 +60,7 @@ translate_reviews_job = SparkSubmitOperator(
     task_id="translate_reviews",
     conn_id="spark-conn",
     application="jobs/python/translate_reviews.py",
-    application_args=["--model_name", "Helsinki-NLP/opus-mt-mul-en",
+    application_args=["--model_name", "/opt/airflow/data/source/opus-mt-mul-en",
                       "--silver_path", silver_path],
     dag=dag
 )
