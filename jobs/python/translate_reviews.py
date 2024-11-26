@@ -41,8 +41,6 @@ translate_udf = udf(translate_review, StringType())
 
 languages = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
 
-translated_dfs = []
-
 for language in languages:
     language_path = os.path.join(input_path, language)
     csv_files = [f for f in os.listdir(language_path) if f.endswith(".csv")]
@@ -56,12 +54,7 @@ for language in languages:
         df_reviews = df_reviews.repartition(8)
 
         df_translated = df_reviews.withColumn("translated_reviews", translate_udf(df_reviews["review"]))
-        translated_dfs.append(df_translated)
 
-df_final = translated_dfs[0]
-for df_translated in translated_dfs[1:]:
-    df_final = df_final.union(df_translated)
-
-df_final.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+        df_translated.write.csv(f"{output_path}_translated/original_{language}", header=True, quote='"', escape='"', mode="overwrite")
 
 spark.stop()
