@@ -1,7 +1,9 @@
 version: '3'
 
 x-spark-common: &spark-common
-  image: bitnami/spark:3.4.2
+  build:
+    context: .
+    dockerfile: Dockerfile.workers
   volumes:
     - ./jobs:/opt/bitnami/spark/jobs
     - ./data:/opt/airflow/data
@@ -29,14 +31,14 @@ x-airflow-common: &airflow-common
 services:
   spark-master:
     <<: *spark-common
-    command: bash -c "pip install transformers==4.46.3 sentencepiece==0.2.0 torch==2.5.1 && bin/spark-class org.apache.spark.deploy.master.Master"
+    command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
       - "9090:8080"
       - "7077:7077"
 
   spark-worker1:
     <<: *spark-common
-    command: bash -c "pip install transformers==4.46.3 sentencepiece==0.2.0 torch==2.5.1 && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:
@@ -47,7 +49,7 @@ services:
 
   spark-worker2:
     <<: *spark-common
-    command: bash -c "pip install transformers==4.46.3 sentencepiece==0.2.0 torch==2.5.1 && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:
@@ -58,7 +60,7 @@ services:
 
   spark-worker3:
     <<: *spark-common
-    command: bash -c "pip install transformers==4.46.3 sentencepiece==0.2.0 torch==2.5.1 && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:
@@ -69,7 +71,7 @@ services:
 
   spark-worker4:
     <<: *spark-common
-    command: bash -c "pip install transformers==4.46.3 sentencepiece==0.2.0 torch==2.5.1 && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:

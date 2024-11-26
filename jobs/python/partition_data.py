@@ -21,7 +21,7 @@ output_path = args.silver_path + "steam_reviews"
 #     'czech', 'italian', 'greek', 'thai', 'dutch', 'vietnamese',
 #     'finnish', 'japanese', 'korean', 'portuguese', 'swedish',
 #     'norwegian', 'danish', 'romanian']
-
+#
 # for file_name in os.listdir(input_path):
 #     if file_name.endswith(".csv"):
 #         input_file_path = os.path.join(input_path, file_name)
