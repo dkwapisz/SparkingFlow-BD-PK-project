@@ -1,13 +1,20 @@
 version: '3'
 
 x-spark-common: &spark-common
-  image: bitnami/spark:3.4.2
+  build:
+    context: .
+    dockerfile: Dockerfile.workers
   volumes:
     - ./jobs:/opt/bitnami/spark/jobs
     - ./data:/opt/airflow/data
   networks:
     - code-with-yu
   user: root
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
 
 x-airflow-common: &airflow-common
   build:
@@ -25,6 +32,11 @@ x-airflow-common: &airflow-common
   networks:
     - code-with-yu
   user: root
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
 
 services:
   spark-master:
@@ -41,41 +53,8 @@ services:
       - spark-master
     environment:
       SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://spark-master:7077
-
-  spark-worker2:
-    <<: *spark-common
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://spark-master:7077
-
-  spark-worker3:
-    <<: *spark-common
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://spark-master:7077
-
-  spark-worker4:
-    <<: *spark-common
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
+      SPARK_WORKER_CORES: 10
+      SPARK_WORKER_MEMORY: 6g
       SPARK_MASTER_URL: spark://spark-master:7077
 
   postgres:

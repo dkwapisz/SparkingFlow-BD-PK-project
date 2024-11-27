@@ -13,7 +13,6 @@ dag = DAG(
         "owner": "Group C - Steam Reviews",
         "start_date": airflow.utils.dates.days_ago(1)
     },
-    schedule_interval="@daily"
 )
 
 start = PythonOperator(
@@ -56,6 +55,16 @@ partition_data_job = SparkSubmitOperator(
                       "--silver_path", silver_path],
     dag=dag
 )
+
+# translate_reviews_job = SparkSubmitOperator(
+#     task_id="translate_reviews",
+#     conn_id="spark-conn",
+#     application="jobs/python/translate_reviews.py",
+#     application_args=["--model_name", "/opt/airflow/data/source/opus-mt-mul-en",
+#                       "--silver_path", silver_path],
+#     dag=dag
+# )
+
 
 include_games_data_job = SparkSubmitOperator(
     task_id="include_games_data",
