@@ -51,10 +51,9 @@ for language in languages:
         print_language_info(language, csv_path)
 
         df_reviews = df.select("app_id", "review")
-        df_reviews = df_reviews.repartition(8)
 
         df_translated = df_reviews.withColumn("translated_reviews", translate_udf(df_reviews["review"]))
 
-        df_translated.write.csv(f"{output_path}_translated/original_{language}", header=True, quote='"', escape='"', mode="overwrite")
+        df_translated.write.csv(f"{output_path}/original_{language}", header=True, quote='"', escape='"', mode="overwrite")
 
 spark.stop()
