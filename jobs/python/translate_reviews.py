@@ -1,5 +1,6 @@
 import argparse
 import os
+import torch
 
 import transformers
 from pyspark.sql import SparkSession
@@ -19,8 +20,12 @@ input_path = args.silver_path + "steam_reviews"
 output_path = args.silver_path + "steam_reviews_translated"
 
 tokenizer = transformers.MarianTokenizer.from_pretrained(model_name)
-model = transformers.MarianMTModel.from_pretrained(model_name)
+model = transformers.MarianMTModel.from_pretrained(model_name).to("cuda")
 
+if torch.cuda.is_available():
+    print("------------------------- CUDA is available! ------------------------- ")
+else:
+    print("------------------------- CUDA is NOT available! ------------------------- ")
 
 def print_language_info(language, csv_path):
     print("-" * 50)
@@ -30,7 +35,7 @@ def print_language_info(language, csv_path):
 
 def translate_review(text):
     if text:
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to("cuda")
         translated = model.generate(**inputs)
         translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
         return translated_text
@@ -50,7 +55,7 @@ for language in languages:
 
         print_language_info(language, csv_path)
 
-        df_reviews = df.select("app_id", "review")
+        df_reviews = df.select("app_id", "review").limit(100)
 
         df_translated = df_reviews.withColumn("translated_reviews", translate_udf(df_reviews["review"]))
 
