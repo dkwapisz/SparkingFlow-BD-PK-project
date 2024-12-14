@@ -7,6 +7,7 @@ x-spark-common: &spark-common
   volumes:
     - ./jobs:/opt/bitnami/spark/jobs
     - ./data:/opt/airflow/data
+    - ./jars:/opt/airflow/jars
   networks:
     - code-with-yu
   user: root
@@ -27,6 +28,7 @@ x-airflow-common: &airflow-common
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./data:/opt/airflow/data
+    - ./jars:/opt/airflow/jars
   depends_on:
     - postgres
   networks:
@@ -53,8 +55,8 @@ services:
       - spark-master
     environment:
       SPARK_MODE: worker
-      SPARK_WORKER_CORES: 10
-      SPARK_WORKER_MEMORY: 6g
+      SPARK_WORKER_CORES: 4
+      SPARK_WORKER_MEMORY: 2g
       SPARK_MASTER_URL: spark://spark-master:7077
 
   postgres:
@@ -65,6 +67,8 @@ services:
       - POSTGRES_DB=airflow
     networks:
       - code-with-yu
+    expose:
+      - 5432
     user: root
 
   webserver:
