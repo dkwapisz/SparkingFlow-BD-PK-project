@@ -55,7 +55,7 @@ for language in languages:
 
         print_language_info(language, csv_path)
 
-        df_reviews = df.select("app_id", "review").limit(100)
+        df_reviews = df.select("*").limit(100)
 
         df_translated = df_reviews.withColumn("translated_reviews", translate_udf(df_reviews["review"]))
 
