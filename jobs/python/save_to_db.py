@@ -1,9 +1,23 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
-from pyspark.sql.functions import monotonically_increasing_id
+from pyspark.sql.functions import (
+    monotonically_increasing_id,
+    col,
+    explode,
+    split,
+    row_number,
+    trim,
+)
+from pyspark.sql.window import Window
 import argparse
 import os
+
+
+def show_debug_info(df, message):
+    print(f"DEBUG: {message}")
+    df.show(truncate=False)
+
 
 spark = (
     SparkSession.builder.appName("Save to db")
@@ -23,6 +37,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 input_path = args.silver_path + "steam_reviews"
+input_path_games = args.silver_path + "games"
 jdbc_url = "jdbc:postgresql://postgres/airflow"
 properties = {
     "user": "airflow",
@@ -32,9 +47,7 @@ properties = {
 
 
 def save_to_postgresql(df: DataFrame, table_name: str):
-    df.write.jdbc(
-        url=jdbc_url, table=table_name, mode="overwrite", properties=properties
-    )
+    df.write.jdbc(url=jdbc_url, table=table_name, mode="append", properties=properties)
 
 
 def create_reference_tables():
@@ -74,7 +87,61 @@ def normalize_silver_to_gold():
     languages = [
         d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))
     ]
+
+    games = [
+        os.path.join(input_path_games, f)
+        for f in os.listdir(input_path_games)
+        if f.endswith(".csv")  # Include only CSV files
+    ]
     create_reference_tables()
+    print(f"Silver Path: {args.silver_path}")
+    print(f"Input Path Games: {input_path_games}")
+    print("Games folder: {}".format(games))
+
+    for csv_file in games:
+        silver_data = spark.read.csv(
+            csv_file, header=True, multiLine=True, quote='"', escape='"'
+        )
+        publishers_table = (
+            silver_data.select(explode(split(col("publishers"), ",")).alias("name"))
+            .withColumn("name", trim(col("name")))  # Remove leading/trailing spaces
+            .distinct()
+            .withColumn(
+                "publisher_id", row_number().over(Window.orderBy("name"))
+            )  # Assign unique IDs
+        )
+        show_debug_info(publishers_table, "")
+        save_to_postgresql(publishers_table, "publishers")
+
+        # Normalize Genres
+        genres_table = (
+            silver_data.select(explode(split(col("genres"), ",")).alias("name"))
+            .withColumn("name", trim(col("name")))  # Remove leading/trailing spaces
+            .distinct()
+            .withColumn(
+                "genre_id", row_number().over(Window.orderBy("name"))
+            )  # Assign unique IDs
+        )
+        save_to_postgresql(genres_table, "genres")
+
+        # Normalize Games
+        # Enrich with normalized IDs for genres and publishers
+        games_table = silver_data.select(
+            col("game_id").alias("app_id"),
+            col("game_name").alias("app_name"),
+            col("genres"),
+            col("publishers"),
+        ).distinct()
+
+        # Optional: Split and explode genres and publishers for easier joins later
+        games_table = (
+            games_table.withColumn("genre", explode(split(col("genres"), ",")))
+            .withColumn("publisher", explode(split(col("publishers"), ",")))
+            .withColumn("genre", trim(col("genre")))
+            .withColumn("publisher", trim(col("publisher")))
+        )
+        show_debug_info(games_table, "")
+        save_to_postgresql(games_table, "games")
 
     for language in languages:
         language_path = os.path.join(input_path, language)
@@ -110,33 +177,18 @@ def normalize_silver_to_gold():
             ).distinct()
             save_to_postgresql(users_table, "users")
 
-            regions_table = silver_data.select(
-                silver_data["language"].alias("language"),
-            ).distinct()
-            regions_table = regions_table.withColumn(
-                "region_id", monotonically_increasing_id()
+            regions_table = (
+                silver_data.select(
+                    silver_data["language"].alias("language"),
+                )
+                .distinct()
+                .withColumn("region_id", row_number().over(Window.orderBy("language")))
             )
             save_to_postgresql(regions_table, "regions")
-
-            # genres_table = silver_data.select(
-            #     silver_data["genre_name"].alias("name")
-            # ).distinct()
-            # save_to_postgresql(genres_table, "genres")
-
-            # publishers_table = silver_data.select(
-            #     silver_data["publisher_name"].alias("name")
-            # ).distinct()
-            # save_to_postgresql(publishers_table, "publishers")
 
             regions_df = spark.read.jdbc(
                 url=jdbc_url, table="regions", properties=properties
             )
-            # genres_df = spark.read.jdbc(
-            #     url=jdbc_url, table="genres", properties=properties
-            # )
-            # publishers_df = spark.read.jdbc(
-            #     url=jdbc_url, table="publishers", properties=properties
-            # )
 
             reviews_table = (
                 silver_data.join(
@@ -144,12 +196,6 @@ def normalize_silver_to_gold():
                     silver_data["language"] == regions_df["language"],
                     "left",
                 )
-                # .join(genres_df, silver_data["genre_name"] == genres_df["name"], "left")
-                # .join(
-                #     publishers_df,
-                #     silver_data["publisher_name"] == publishers_df["name"],
-                #     "left",
-                # )
                 .select(
                     "review_id",
                     "app_id",
@@ -165,18 +211,10 @@ def normalize_silver_to_gold():
                     "timestamp_created",
                     "timestamp_updated",
                     regions_df["region_id"].alias("region_id"),
-                    # genres_df["genre_id"].alias("genre_id"),
-                    # publishers_df["publisher_id"].alias("publisher_id"),
-                ).distinct()
+                )
+                .distinct()
             )
             save_to_postgresql(reviews_table, "reviews")
-
-            games_table = silver_data.select(
-                "app_id",
-                "app_name",
-                silver_data["author_playtime_at_review"].alias("playtime_at_review"),
-            ).distinct()
-            save_to_postgresql(games_table, "games")
 
 
 normalize_silver_to_gold()
