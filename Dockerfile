@@ -25,10 +25,10 @@ RUN pip install apache-airflow-providers-apache-spark==4.11.1
 
 RUN pip install pyspark==3.4.2
 
-RUN pip install torch==2.5.1
+# RUN pip install torch==2.5.1
 
-RUN pip install transformers==4.46.3
+# RUN pip install transformers==4.46.3
 
-RUN pip install sentencepiece==0.2.0
+# RUN pip install sentencepiece==0.2.0
 
-RUN pip install sacremoses==0.1.1
+# RUN pip install sacremoses==0.1.1
