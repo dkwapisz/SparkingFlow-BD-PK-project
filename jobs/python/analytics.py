@@ -95,9 +95,7 @@ def aggregate_gold_layer():
     """
     )
     top_res.show()
-    top_res.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Top rated Games.csv", header=True
-    )
+    top_res.toPandas().to_csv(output_path + "Top rated Games.csv", header=True)
 
     most_res = spark.sql(
         """
@@ -111,7 +109,8 @@ def aggregate_gold_layer():
     )
     most_res.show()
     most_res.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Most reviewed Games.csv", header=True
+        output_path + "Most reviewed Games.csv",
+        header=True,
     )
 
     most_user = spark.sql(
@@ -126,7 +125,8 @@ def aggregate_gold_layer():
     )
     most_user.show()
     most_user.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Most reviewes users.csv", header=True
+        output_path + "Most reviewes users.csv",
+        header=True,
     )
 
     print("Top games non-casual users:")
@@ -143,7 +143,8 @@ def aggregate_gold_layer():
     )
     non_cas.show()
     non_cas.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Most popular non casual gamers.csv", header=True
+        output_path + "Most popular non casual gamers.csv",
+        header=True,
     )
 
     casual = spark.sql(
@@ -159,7 +160,8 @@ def aggregate_gold_layer():
     )
     casual.show()
     casual.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Most popular casual gamers.csv", header=True
+        output_path + "Most popular casual gamers.csv",
+        header=True,
     )
 
     most_helpful = spark.sql(
@@ -173,7 +175,7 @@ def aggregate_gold_layer():
     )
     most_helpful.show()
     most_helpful.toPandas().to_csv(
-        "/opt/airflow/data/silver/gold/Most helpful reviews.csv", header=True
+        output_path + "Most helpful reviews.csv", header=True
     )
     # print("Reviews by Genre:")
     # spark.sql(
