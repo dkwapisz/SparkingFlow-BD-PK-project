@@ -64,6 +64,7 @@ for file_name in os.listdir(input_path):
         if "language" in df.columns:
             df = df.coalesce(1)
             df = df.withColumn("language_partition", F.col("language"))
+            df = df.select("*").limit(600)
             df.write.partitionBy("language_partition").csv(
                 output_path, header=True, quote='"', escape='"', mode="overwrite"
             )

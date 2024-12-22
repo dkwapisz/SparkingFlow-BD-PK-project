@@ -5,15 +5,9 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName("LoadSample").getOrCreate()
 
 parser = argparse.ArgumentParser(description="Split CSV into smaller partitions")
-parser.add_argument(
-    "--source_path", type=str, required=True, help="Path to the source directory"
-)
-parser.add_argument(
-    "--num_partition", type=int, default=80, help="Number of partitions"
-)
-parser.add_argument(
-    "--bronze_path", type=str, required=True, help="Path to the bronze directory"
-)
+parser.add_argument("--source_path", type=str, required=True, help="Path to the source directory")
+parser.add_argument("--num_partition", type=int, default=80, help="Number of partitions")
+parser.add_argument("--bronze_path", type=str, required=True, help="Path to the bronze directory")
 
 args = parser.parse_args()
 
@@ -34,9 +28,7 @@ df_first_partition = spark.createDataFrame(first_partition[0], df_repartitioned.
 
 df_first_partition = df_first_partition.coalesce(1)
 
-df_first_partition.write.csv(
-    output_path, header=True, quote='"', escape='"', mode="overwrite"
-)
+df_first_partition.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
 
 print("Repartitioning completed")
 

@@ -14,30 +14,24 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# input_path = args.bronze_path + "steam_reviews"
-# output_path = args.silver_path + "steam_reviews"
-# input_games_path = args.bronze_path + "games.csv"
+input_path = args.bronze_path + "games"
+output_path = args.silver_path + "games"
 
-# games_df = spark.read.csv(
-#     input_games_path, header=True, multiLine=True, quote='"', escape='"'
-# )
-# normalized_games = games_df.select(
-#     col("app_id").cast("int").alias("app_id"),
-#     col("title").alias("name"),
-#     col("publisher"),
-#     col("developer"),
-#     col("date_release").cast("date"),
-#     col("genre"),
-# )
-# for file_name in os.listdir(input_path):
-#     if file_name.endswith(".csv"):
-#         input_file_path = os.path.join(input_path, file_name)
+games_df = spark.read.csv(
+    input_path, header=True, multiLine=True, quote='"', escape='"'
+)
+normalized_games = games_df.select(
+    col("AppID").alias("game_id"),
+    col("Name").alias("game_name"),
+    col("Release date").alias("release_date"),
+    col("Price").cast("float").alias("price"),
+    col("Required age").cast("int").alias("required_age"),
+    col("Estimated owners").alias("estimated_owners"),
+    col("Genres").alias("genres"),
+    col("Publishers").alias("publishers"),
+)
 
-#         print(f"Processing file: {input_file_path}")
-
-#         df = spark.read.csv(
-#             input_file_path, header=True, multiLine=True, quote='"', escape='"'
-#         )
-
-
+normalized_games.repartition(10).write.csv(
+    output_path, header=True, quote='"', escape='"', mode="overwrite"
+)
 spark.stop()
