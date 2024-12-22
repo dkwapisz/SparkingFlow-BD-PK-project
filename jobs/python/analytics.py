@@ -1,5 +1,18 @@
+import argparse
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
+import matplotlib.pyplot as plt
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--gold_path", type=str, required=True, help="Path to the gold layer"
+)
+
+args = parser.parse_args()
+
+output_path = args.gold_path
+
 
 spark = (
     SparkSession.builder.appName("Save to db")
@@ -57,29 +70,34 @@ def aggregate_gold_layer():
     )
     print(top_rated_games)
 
-    print("Top-rated Games:")
-    spark.sql(
+    best_games = spark.sql(
         """
-        SELECT g.app_name, SUM(r.votes_helpful) AS total_helpful_votes
+        SELECT g.app_name, SUM(r.votes_helpful) AS counted
         FROM reviews r
         JOIN games g ON r.app_id = g.app_id
         GROUP BY g.app_name
-        ORDER BY total_helpful_votes DESC
-        LIMIT 10
+        ORDER BY counted DESC
+        LIMIT 3
     """
-    ).show()
+    )
+
+    print("Top 3 Rated Games:")
+    best_games.show()
+
 
     print("Most Reviewed Games:")
-    spark.sql(
+    most_reviewed_games = spark.sql(
         """
-        SELECT g.app_name, COUNT(r.review_id) AS review_count
+        SELECT g.app_name, COUNT(r.review_id) AS counted
         FROM reviews r
         JOIN games g ON r.app_id = g.app_id
         GROUP BY g.app_name
-        ORDER BY review_count DESC
-        LIMIT 10
+        ORDER BY counted DESC
+        LIMIT 3
     """
-    ).show()
+    )
+
+    most_reviewed_games.show()
 
     # print("Most Active Users:")
     # spark.sql(
@@ -116,6 +134,42 @@ def aggregate_gold_layer():
     #     ORDER BY review_count DESC
     # """
     # ).show()
+
+
+    generate_games_chart(title="Top 3 Rated Games - Podium", ylabel="Total Helpful Votes", output_path=output_path+"BestGames", games=best_games)
+    generate_games_chart(title="Top 3 Rated Games - Podium", ylabel="Total Reviewes", output_path=output_path + "MostReviedGames", games=most_reviewed_games)
+
+def generate_games_chart(title, ylabel, output_path, games):
+    directory = os.path.dirname(output_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Utworzono katalog: {directory}")
+ 
+    game_names = games.select("app_name").rdd.flatMap(lambda x: x).collect()
+    votes = games.select("counted").rdd.flatMap(lambda x: x).collect()
+
+    positions = [2, 1, 3] 
+    colors = ['#FFD700', '#C0C0C0', '#CD7F32'] 
+
+    _, ax = plt.subplots(figsize=(8, 6))
+
+    bars = ax.bar(positions, votes, color=colors, tick_label=game_names)
+
+    for bar in bars:
+        yval = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, yval, int(yval), ha='center', va='bottom')
+
+    ax.set_xlabel('Game Position')
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(game_names)
+
+    plt.savefig(output_path)
+    plt.close()
+
+    print(f"Wykres zapisany w: {output_path}")
 
 
 aggregate_gold_layer()

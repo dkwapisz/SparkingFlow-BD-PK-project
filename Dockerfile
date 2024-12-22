@@ -32,3 +32,5 @@ RUN pip install pyspark==3.4.2
 # RUN pip install sentencepiece==0.2.0
 
 # RUN pip install sacremoses==0.1.1
+
+RUN pip install matplotlib

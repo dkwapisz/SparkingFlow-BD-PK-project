@@ -6,6 +6,7 @@ from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOpe
 source_path = "/opt/airflow/data/source/"
 bronze_path = "/opt/airflow/data/bronze/"
 silver_path = "/opt/airflow/data/silver/"
+gold_path = "/opt/airflow/data/gold/"
 
 
 def create_dag_own(dag_id, job_type, translate: bool):
@@ -100,7 +101,7 @@ def create_dag_own(dag_id, job_type, translate: bool):
         task_id="analytics",
         conn_id="spark-conn",
         application="jobs/python/analytics.py",
-        application_args=["--silver_path", silver_path],
+        application_args=["--gold_path", gold_path],
         dag=dag,
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
     )
@@ -129,6 +130,38 @@ def create_dag_own(dag_id, job_type, translate: bool):
 
     return dag
 
+def create_analytics_dag_own(dag_id):
+
+    dag = DAG(
+        dag_id=dag_id,
+        default_args={
+            "owner": "Group C - Steam Reviews",
+            "start_date": airflow.utils.dates.days_ago(1),
+        },
+    )
+
+    start = PythonOperator(
+        task_id="start", python_callable=lambda: print("Jobs started"), dag=dag
+    )
+
+    analytics_job = SparkSubmitOperator(
+        task_id="analytics",
+        conn_id="spark-conn",
+        application="jobs/python/analytics.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+
+    end = PythonOperator(
+        task_id="end", python_callable=lambda: print("Jobs completed successfully"), dag=dag
+    )
+    start >> analytics_job >> end
+
+    return dag
+
+
 sample_dag = create_dag_own("sample_dag", job_type="sample", translate=False)
 
 full_dag = create_dag_own("full_dag", job_type="full", translate=False)
@@ -137,8 +170,11 @@ test_dag = create_dag_own("test_dag", job_type=None, translate=False)
 
 translate_dag = create_dag_own("translate_dag", job_type="sample", translate=True)
 
+analytics_dag = create_analytics_dag_own("analytics_dag")
+
 
 globals()["sample_dag"] = sample_dag
 globals()["full_dag"] = full_dag
 globals()["test_dag"] = test_dag
 globals()["translate_dag"] = translate_dag
+globals()["analytics_dag"] = analytics_dag
