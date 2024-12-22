@@ -61,122 +61,15 @@ def aggregate_gold_layer():
     # genres_table.createOrReplaceTempView("genres")
     regions_table.createOrReplaceTempView("regions")
 
-    # top_rated_games = (
-    #     reviews_table.groupBy("app_id")
-    #     .agg({"votes_helpful": "sum"})
-    #     .join(games_table, "app_id")
-    #     .orderBy("sum(votes_helpful)", ascending=False)
-    #     .limit(10)
-    # )
-    # print(top_rated_games)
 
-    best_games = spark.sql(
-        """
-        SELECT g.app_name, SUM(CASE WHEN recommended='True' THEN 1 ELSE 0 END) AS counted
-        FROM reviews r
-        JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
-        ORDER BY counted DESC
-        LIMIT 3
-    """
-    )
+    generate_best_games()
+    generate_most_reviewed_games()
+    generate_most_reviews_by_user()
+    generate_top_games_non_casual()
+    generate_top_games_casual()
+    generate_top_helpful_reviews()
+    generate_top_games_publishers()
 
-    print("Top 3 Rated Games:")
-    best_games.show()
-
-    top_res = spark.sql(
-        """
-        SELECT g.app_name, SUM(CASE WHEN recommended='True' THEN 1 ELSE 0 END) AS total_recommended
-        FROM reviews r
-        JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
-        ORDER BY total_recommended DESC
-        LIMIT 10
-    """
-    )
-    top_res.show()
-    top_res.toPandas().to_csv(output_path + "Top rated Games.csv", header=True)
-
-    most_res = spark.sql(
-        """
-        SELECT g.app_name, COUNT(r.review_id) AS counted
-        FROM reviews r
-        JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
-        ORDER BY counted DESC
-        LIMIT 3
-    """
-    )
-    most_res.show()
-    most_res.toPandas().to_csv(
-        output_path + "Most reviewed Games.csv",
-        header=True,
-    )
-
-    most_user = spark.sql(
-        """
-        SELECT u.user_id, COUNT(r.review_id) AS reviews_written
-        FROM reviews r
-        JOIN users u ON r.user_id = u.user_id
-        GROUP BY u.user_id
-        ORDER BY reviews_written DESC
-        LIMIT 10
-    """
-    )
-    most_user.show()
-    most_user.toPandas().to_csv(
-        output_path + "Most reviewes users.csv",
-        header=True,
-    )
-
-    print("Top games non-casual users:")
-    non_cas = spark.sql(
-        """
-        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND CAST(u.playtime_last_two_weeks AS FLOAT) > 10 THEN 1 ELSE 0 END) AS total_recommended
-        FROM reviews r
-        JOIN users u ON r.user_id = u.user_id
-        JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
-        ORDER BY total_recommended DESC
-        LIMIT 10
-    """
-    )
-    non_cas.show()
-    non_cas.toPandas().to_csv(
-        output_path + "Most popular non casual gamers.csv",
-        header=True,
-    )
-
-    casual = spark.sql(
-        """
-        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND CAST(u.playtime_last_two_weeks AS FLOAT) < 10 THEN 1 ELSE 0 END) AS total_recommended
-        FROM reviews r
-        JOIN users u ON r.user_id = u.user_id
-        JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
-        ORDER BY total_recommended DESC
-        LIMIT 10
-    """
-    )
-    casual.show()
-    casual.toPandas().to_csv(
-        output_path + "Most popular casual gamers.csv",
-        header=True,
-    )
-
-    most_helpful = spark.sql(
-        """
-        SELECT r.translated_review, r.review, g.app_name, r.votes_helpful
-        FROM reviews r
-        JOIN games g ON r.app_id = g.app_id
-        ORDER BY r.votes_helpful DESC
-        LIMIT 10
-    """
-    )
-    most_helpful.show()
-    most_helpful.toPandas().to_csv(
-        output_path + "Most helpful reviews.csv", header=True
-    )
     # print("Reviews by Genre:")
     # spark.sql(
     #     """
@@ -201,29 +94,197 @@ def aggregate_gold_layer():
     # """
     # ).show()
 
+
+
+
+def generate_best_games():
+    best_games = spark.sql(
+        """
+        SELECT g.app_name, SUM(CASE WHEN recommended='True' THEN 1 ELSE 0 END) AS counted
+        FROM reviews r
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+
+    print("Top 10 Best Games:")
+    best_games.show()
+    best_games.toPandas().to_csv(output_path + "Best Games.csv", header=True)
     generate_games_chart(
-        title="Top 3 Rated Games - Podium",
+        title="Top 3 Best Games - Podium",
         ylabel="Total Recommended Votes",
-        output_path=output_path + "BestGames",
-        games=best_games,
+        output_path=output_path + "Best Games",
+        games=best_games.limit(3),
+        selected_name="app_name"
+    )
+
+def generate_most_reviewed_games():
+    most_res = spark.sql(
+        """
+        SELECT g.app_name, COUNT(r.review_id) AS counted
+        FROM reviews r
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    most_res.show()
+    most_res.toPandas().to_csv(
+        output_path + "Most reviewed Games.csv",
+        header=True,
     )
     generate_games_chart(
-        title="Top 3 Rated Games - Podium",
+        title="Top 3 Most Revied Games - Podium",
         ylabel="Total Reviewes",
-        output_path=output_path + "MostReviedGames",
-        games=most_res,
+        output_path=output_path + "Most reviewed Games",
+        games=most_res.limit(3),
+        selected_name="app_name"
     )
 
+def generate_most_reviews_by_user():
+    most_user = spark.sql(
+        """
+        SELECT u.user_id, COUNT(r.review_id) AS counted
+        FROM reviews r
+        JOIN users u ON r.user_id = u.user_id
+        GROUP BY u.user_id
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    most_user.show()
+    most_user.toPandas().to_csv(
+        output_path + "Most reviewes by user.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Most reviewes by User - Podium",
+        ylabel="Most Reviews",
+        output_path=output_path + "Most reviewes by user",
+        games=most_user.limit(3),
+        selected_name="user_id"
+    )
 
-def generate_games_chart(title, ylabel, output_path, games):
+def generate_top_games_non_casual():
+    print("Top games non-casual users:")
+    non_cas = spark.sql(
+        """
+        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND CAST(u.playtime_last_two_weeks AS FLOAT) > 10 THEN 1 ELSE 0 END) AS counted
+        FROM reviews r
+        JOIN users u ON r.user_id = u.user_id
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    non_cas.show()
+    non_cas.toPandas().to_csv(
+        output_path + "Most popular non casual gamers.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Most popular non casual gamers - Podium",
+        ylabel="Most non casual gamers",
+        output_path=output_path + "Most popular non casual gamers",
+        games=non_cas.limit(3),
+        selected_name="app_name"
+    )
+
+def generate_top_games_casual():
+    print("Top games casual users:")
+    casual = spark.sql(
+        """
+        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND CAST(u.playtime_last_two_weeks AS FLOAT) < 10 THEN 1 ELSE 0 END) AS counted
+        FROM reviews r
+        JOIN users u ON r.user_id = u.user_id
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    casual.show()
+    casual.toPandas().to_csv(
+        output_path + "Most popular casual gamers.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Most popular casual gamers - Podium",
+        ylabel="Most casual gamers",
+        output_path=output_path + "Most popular casual gamers",
+        games=casual.limit(3),
+        selected_name="app_name"
+    )
+
+def generate_top_helpful_reviews():
+    print("Top games casual users:")
+    most_helpful = spark.sql(
+        """
+        SELECT r.translated_review, r.review AS review, g.app_name, r.votes_helpful AS counted
+        FROM reviews r
+        JOIN games g ON r.app_id = g.app_id
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    most_helpful.show()
+    most_helpful.toPandas().to_csv(
+        output_path + "Most helpful reviews.csv", header=True
+    )
+    # generate_games_chart(
+    #     title="Top 3 Most helpful reviews - Podium",
+    #     ylabel="Most helpful reviews",
+    #     output_path=output_path + "Most helpful reviews",
+    #     games=most_helpful.limit(3),
+    #     selected_name="review"
+    # )
+
+def generate_top_games_publishers():
+    print("Top games publishers:")
+    publishers = spark.sql(
+        """
+        SELECT 
+            g.publisher,
+            CASE 
+                WHEN SUM(CASE WHEN r.recommended = 'False' THEN 1 ELSE 0 END) = 0 
+                THEN NULL
+                ELSE SUM(CASE WHEN r.recommended = 'True' THEN 1 ELSE 0 END) / SUM(CASE WHEN r.recommended = 'False' THEN 1 ELSE 0 END)
+            END AS counted
+        FROM games g
+        JOIN reviews r ON g.app_id = r.app_id
+        GROUP BY g.publisher
+        HAVING (SUM(CASE WHEN r.recommended = 'True' THEN 1 ELSE 0 END) + 
+            SUM(CASE WHEN r.recommended = 'False' THEN 1 ELSE 0 END)) >= 10
+        ORDER BY counted DESC
+        LIMIT 10;
+    """
+    )
+    publishers.show()
+    publishers.toPandas().to_csv(
+        output_path + "Top games publishers.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Best Games Publishers - Podium",
+        ylabel="Top games publishers",
+        output_path=output_path + "Top games publishers",
+        games=publishers.limit(3),
+        selected_name="publisher"
+    )
+
+def generate_games_chart(title, ylabel, output_path, games, selected_name):
     directory = os.path.dirname(output_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
         print(f"Utworzono katalog: {directory}")
 
-    game_names = games.select("app_name").rdd.flatMap(lambda x: x).collect()
+    game_names = games.select(selected_name).rdd.flatMap(lambda x: x).collect()
     votes = games.select("counted").rdd.flatMap(lambda x: x).collect()
-
+    votes = [float(vote) for vote in votes]
     positions = [2, 1, 3]
     colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
 
@@ -240,6 +301,13 @@ def generate_games_chart(title, ylabel, output_path, games):
     ax.set_xlabel("Game Position")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+
+    min_vote = min(votes)
+    max_vote = max(votes)
+    lower_limit = min_vote * 0.75
+    upper_limit = max_vote * 1.25
+    ax.set_ylim(lower_limit, upper_limit)
+
 
     ax.set_xticks(positions)
     ax.set_xticklabels(game_names)

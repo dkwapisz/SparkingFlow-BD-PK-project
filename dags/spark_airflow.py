@@ -9,7 +9,7 @@ silver_path = "/opt/airflow/data/silver/"
 gold_path = "/opt/airflow/data/gold/"
 
 
-def create_dag_own(dag_id, job_type, translate: bool, no_parts=80):
+def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
     dag = DAG(
         dag_id=dag_id,
         default_args={
