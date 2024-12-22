@@ -36,7 +36,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-input_path = args.silver_path + "steam_reviews"
+input_path = args.silver_path + "steam_reviews_translated"
 input_path_games = args.silver_path + "games"
 jdbc_url = "jdbc:postgresql://postgres/airflow"
 properties = {
@@ -47,7 +47,9 @@ properties = {
 
 
 def save_to_postgresql(df: DataFrame, table_name: str):
-    df.write.jdbc(url=jdbc_url, table=table_name, mode="overwrite", properties=properties)
+    df.write.jdbc(
+        url=jdbc_url, table=table_name, mode="overwrite", properties=properties
+    )
 
 
 def create_reference_tables():
@@ -137,8 +139,8 @@ def normalize_silver_to_gold():
 
     # Optional: Split and explode genres and publishers for easier joins later
     games_table = (
-        games_table.withColumn("genre", explode(split(col("genres"), ",")))
-        .withColumn("publisher", explode(split(col("publishers"), ",")))
+        games_table.withColumn("genre", split(col("genres"), ",")[0])
+        .withColumn("publisher", split(col("publishers"), ",")[0])
         .withColumn("genre", trim(col("genre")))
         .withColumn("publisher", trim(col("publisher")))
     )
@@ -147,7 +149,11 @@ def normalize_silver_to_gold():
 
     regions_table = (
         spark.read.csv(
-            os.path.join(input_path, "*/*.csv"), header=True, multiLine=True, quote='"', escape='"'
+            os.path.join(input_path, "*/*.csv"),
+            header=True,
+            multiLine=True,
+            quote='"',
+            escape='"',
         )
         .select("language")
         .distinct()
@@ -163,9 +169,7 @@ def normalize_silver_to_gold():
             csv_paths.append(os.path.join(language_path, csv_file))
 
     silver_data = (
-        spark.read.csv(
-            csv_paths, header=True, multiLine=True, quote='"', escape='"'
-        )
+        spark.read.csv(csv_paths, header=True, multiLine=True, quote='"', escape='"')
         .withColumnRenamed("author.steamid", "author_steamid")
         .withColumnRenamed("author.num_games_owned", "author_num_games_owned")
         .withColumnRenamed("author.num_reviews", "author_num_reviews")
@@ -173,9 +177,7 @@ def normalize_silver_to_gold():
         .withColumnRenamed(
             "author.playtime_last_two_weeks", "author_playtime_last_two_weeks"
         )
-        .withColumnRenamed(
-            "author.playtime_at_review", "author_playtime_at_review"
-        )
+        .withColumnRenamed("author.playtime_at_review", "author_playtime_at_review")
         .withColumnRenamed("author.last_played", "author_last_played")
     )
 
@@ -184,16 +186,12 @@ def normalize_silver_to_gold():
         silver_data["author_num_games_owned"].alias("num_games_owned"),
         silver_data["author_num_reviews"].alias("num_reviews"),
         silver_data["author_playtime_forever"].alias("playtime_forever"),
-        silver_data["author_playtime_last_two_weeks"].alias(
-            "playtime_last_two_weeks"
-        ),
+        silver_data["author_playtime_last_two_weeks"].alias("playtime_last_two_weeks"),
         silver_data["author_last_played"].alias("last_played"),
     ).distinct()
     save_to_postgresql(users_table, "users")
 
-    regions_df = spark.read.jdbc(
-        url=jdbc_url, table="regions", properties=properties
-    )
+    regions_df = spark.read.jdbc(url=jdbc_url, table="regions", properties=properties)
 
     reviews_table = (
         silver_data.join(
@@ -204,7 +202,9 @@ def normalize_silver_to_gold():
         .select(
             "review_id",
             "app_id",
+            silver_data["author_steamid"].alias("user_id"),
             "review",
+            "translated_review",
             "recommended",
             "votes_helpful",
             "votes_funny",

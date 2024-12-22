@@ -9,8 +9,7 @@ silver_path = "/opt/airflow/data/silver/"
 gold_path = "/opt/airflow/data/gold/"
 
 
-def create_dag_own(dag_id, job_type, translate: bool):
-
+def create_dag_own(dag_id, job_type, translate: bool, no_parts=80):
     dag = DAG(
         dag_id=dag_id,
         default_args={
@@ -35,10 +34,15 @@ def create_dag_own(dag_id, job_type, translate: bool):
             task_id="load_sample",
             conn_id="spark-conn",
             application="jobs/python/load_sample.py",
-            application_args=["--source_path", source_path,
-                              "--num_partition", "80",
-                              "--bronze_path", bronze_path],
-            dag=dag
+            application_args=[
+                "--source_path",
+                source_path,
+                "--num_partition",
+                no_parts,
+                "--bronze_path",
+                bronze_path,
+            ],
+            dag=dag,
         )
 
     elif job_type == "full":
@@ -46,10 +50,15 @@ def create_dag_own(dag_id, job_type, translate: bool):
             task_id="load_full",
             conn_id="spark-conn",
             application="jobs/python/load_full.py",
-            application_args=["--source_path", source_path,
-                              "--num_partition", "200",
-                              "--bronze_path", bronze_path],
-            dag=dag
+            application_args=[
+                "--source_path",
+                source_path,
+                "--num_partition",
+                "2500",
+                "--bronze_path",
+                bronze_path,
+            ],
+            dag=dag,
         )
 
     if job_type in ["sample", "full"]:
@@ -57,7 +66,12 @@ def create_dag_own(dag_id, job_type, translate: bool):
             task_id="load_games_to_bronze",
             conn_id="spark-conn",
             application="jobs/python/load_games_to_bronze.py",
-            application_args=["--source_path", source_path, "--bronze_path", bronze_path],
+            application_args=[
+                "--source_path",
+                source_path,
+                "--bronze_path",
+                bronze_path,
+            ],
             dag=dag,
         )
 
@@ -69,16 +83,19 @@ def create_dag_own(dag_id, job_type, translate: bool):
         dag=dag,
     )
 
-    if(translate):
+    if translate:
         translate_reviews_job = SparkSubmitOperator(
             task_id="translate_reviews",
             conn_id="spark-conn",
             application="jobs/python/translate_reviews.py",
-            application_args=["--model_name", "/opt/airflow/data/source/opus-mt-mul-en",
-                            "--silver_path", silver_path],
-            dag=dag
+            application_args=[
+                "--model_name",
+                "/opt/airflow/data/source/opus-mt-mul-en",
+                "--silver_path",
+                silver_path,
+            ],
+            dag=dag,
         )
-
 
     include_games_data_job = SparkSubmitOperator(
         task_id="include_games_data",
@@ -107,7 +124,9 @@ def create_dag_own(dag_id, job_type, translate: bool):
     )
 
     end = PythonOperator(
-        task_id="end", python_callable=lambda: print("Jobs completed successfully"), dag=dag
+        task_id="end",
+        python_callable=lambda: print("Jobs completed successfully"),
+        dag=dag,
     )
 
     if job_type == "sample":
@@ -129,6 +148,7 @@ def create_dag_own(dag_id, job_type, translate: bool):
     include_games_data_job >> save_to_db_job >> analytics_job >> end
 
     return dag
+
 
 def create_analytics_dag_own(dag_id):
 
@@ -153,9 +173,10 @@ def create_analytics_dag_own(dag_id):
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
     )
 
-
     end = PythonOperator(
-        task_id="end", python_callable=lambda: print("Jobs completed successfully"), dag=dag
+        task_id="end",
+        python_callable=lambda: print("Jobs completed successfully"),
+        dag=dag,
     )
     start >> analytics_job >> end
 
@@ -168,7 +189,13 @@ full_dag = create_dag_own("full_dag", job_type="full", translate=False)
 
 test_dag = create_dag_own("test_dag", job_type=None, translate=False)
 
-translate_dag = create_dag_own("translate_dag", job_type="sample", translate=True)
+translate_dag = create_dag_own(
+    "translate_dag", job_type="sample", translate=True, no_parts="2500"
+)
+
+translate_only_dag = create_dag_own(
+    "translate_only_dag", job_type=None, translate=True, no_parts="2500"
+)
 
 analytics_dag = create_analytics_dag_own("analytics_dag")
 
@@ -178,3 +205,4 @@ globals()["full_dag"] = full_dag
 globals()["test_dag"] = test_dag
 globals()["translate_dag"] = translate_dag
 globals()["analytics_dag"] = analytics_dag
+globals()["translate_only_dag"] = translate_only_dag
