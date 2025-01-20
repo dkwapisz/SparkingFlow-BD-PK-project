@@ -54,7 +54,7 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
                 "--source_path",
                 source_path,
                 "--num_partition",
-                "2500",
+                "80",
                 "--bronze_path",
                 bronze_path,
             ],
@@ -190,11 +190,11 @@ full_dag = create_dag_own("full_dag", job_type="full", translate=False)
 test_dag = create_dag_own("test_dag", job_type=None, translate=False)
 
 translate_dag = create_dag_own(
-    "translate_dag", job_type="sample", translate=True, no_parts="2500"
+    "translate_dag", job_type="full", translate=True, no_parts="512"
 )
 
 translate_only_dag = create_dag_own(
-    "translate_only_dag", job_type=None, translate=True, no_parts="2500"
+    "translate_only_dag", job_type=None, translate=True, no_parts="512"
 )
 
 analytics_dag = create_analytics_dag_own("analytics_dag")

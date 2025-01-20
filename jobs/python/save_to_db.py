@@ -93,7 +93,7 @@ def normalize_silver_to_gold():
     games = [
         os.path.join(input_path_games, f)
         for f in os.listdir(input_path_games)
-        if f.endswith(".csv")  # Include only CSV files
+        if f.endswith(".parquet")  # Include only Parquet files
     ]
 
     create_reference_tables()
@@ -101,9 +101,7 @@ def normalize_silver_to_gold():
     print(f"Input Path Games: {input_path_games}")
     print("Games folder: {}".format(games))
 
-    silver_data = spark.read.csv(
-        games, header=True, multiLine=True, quote='"', escape='"'
-    )
+    silver_data = spark.read.parquet(*games)
 
     # Normalize Publishers
     publishers_table = (
@@ -148,12 +146,8 @@ def normalize_silver_to_gold():
     save_to_postgresql(games_table, "games")
 
     regions_table = (
-        spark.read.csv(
-            os.path.join(input_path, "*/*.csv"),
-            header=True,
-            multiLine=True,
-            quote='"',
-            escape='"',
+        spark.read.parquet(
+            os.path.join(input_path, "*/*.parquet"),
         )
         .select("language")
         .distinct()
@@ -161,15 +155,15 @@ def normalize_silver_to_gold():
     )
     save_to_postgresql(regions_table, "regions")
 
-    csv_paths = []
+    parquet_paths = []
     for language in languages:
         language_path = os.path.join(input_path, language)
-        csv_files = [f for f in os.listdir(language_path) if f.endswith(".csv")]
-        for csv_file in csv_files:
-            csv_paths.append(os.path.join(language_path, csv_file))
+        parquet_files = [f for f in os.listdir(language_path) if f.endswith(".parquet")]
+        for parquet_file in parquet_files:
+            parquet_paths.append(os.path.join(language_path, parquet_file))
 
     silver_data = (
-        spark.read.csv(csv_paths, header=True, multiLine=True, quote='"', escape='"')
+        spark.read.parquet(*parquet_paths)
         .withColumnRenamed("author.steamid", "author_steamid")
         .withColumnRenamed("author.num_games_owned", "author_num_games_owned")
         .withColumnRenamed("author.num_reviews", "author_num_reviews")

@@ -21,6 +21,10 @@ spark = (
         "spark.driver.extraClassPath",
         "/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
     )
+    .config("spark.executor.memory", "16g")
+    .config("spark.driver.memory", "16g")
+    .config("spark.memory.offHeap.enabled", True)
+    .config("spark.memory.offHeap.size", "16g")
     .getOrCreate()
 )
 
@@ -110,8 +114,7 @@ def generate_best_games():
     )
 
     print("Top 10 Best Games:")
-    best_games.show()
-    best_games.toPandas().to_csv(output_path + "Best Games.csv", header=True)
+    best_games.toPandas().to_parquet(output_path + "Best Games.parquet")
     generate_games_chart(
         title="Top 3 Best Games - Podium",
         ylabel="Total Recommended Votes",
@@ -131,10 +134,8 @@ def generate_most_reviewed_games():
         LIMIT 10
     """
     )
-    most_res.show()
-    most_res.toPandas().to_csv(
-        output_path + "Most reviewed Games.csv",
-        header=True,
+    most_res.toPandas().to_parquet(
+        output_path + "Most reviewed Games.parquet"
     )
     generate_games_chart(
         title="Top 3 Most Revied Games - Podium",
@@ -155,10 +156,8 @@ def generate_most_reviews_by_user():
         LIMIT 10
     """
     )
-    most_user.show()
-    most_user.toPandas().to_csv(
-        output_path + "Most reviewes by user.csv",
-        header=True,
+    most_user.toPandas().to_parquet(
+        output_path + "Most reviewes by user.parquet"
     )
     generate_games_chart(
         title="Top 3 Most reviewes by User - Podium",
@@ -181,10 +180,8 @@ def generate_top_games_non_casual():
         LIMIT 10
     """
     )
-    non_cas.show()
-    non_cas.toPandas().to_csv(
-        output_path + "Most popular non casual gamers.csv",
-        header=True,
+    non_cas.toPandas().to_parquet(
+        output_path + "Most popular non casual gamers.parquet"
     )
     generate_games_chart(
         title="Top 3 Most popular non casual gamers - Podium",
@@ -207,10 +204,8 @@ def generate_top_games_casual():
         LIMIT 10
     """
     )
-    casual.show()
-    casual.toPandas().to_csv(
-        output_path + "Most popular casual gamers.csv",
-        header=True,
+    casual.toPandas().to_parquet(
+        output_path + "Most popular casual gamers.parquet"
     )
     generate_games_chart(
         title="Top 3 Most popular casual gamers - Podium",
@@ -231,9 +226,8 @@ def generate_top_helpful_reviews():
         LIMIT 10
     """
     )
-    most_helpful.show()
-    most_helpful.toPandas().to_csv(
-        output_path + "Most helpful reviews.csv", header=True
+    most_helpful.toPandas().to_parquet(
+        output_path + "Most helpful reviews.parquet"
     )
     # generate_games_chart(
     #     title="Top 3 Most helpful reviews - Podium",
@@ -263,10 +257,8 @@ def generate_top_games_publishers():
         LIMIT 10;
     """
     )
-    publishers.show()
-    publishers.toPandas().to_csv(
-        output_path + "Top games publishers.csv",
-        header=True,
+    publishers.toPandas().to_parquet(
+        output_path + "Top games publishers.parquet"
     )
     generate_games_chart(
         title="Top 3 Best Games Publishers - Podium",
