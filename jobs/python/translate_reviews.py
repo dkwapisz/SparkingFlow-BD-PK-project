@@ -35,7 +35,8 @@ def translate_review_batch(partition, api_url, api_headers):
         # Convert Row to dict for easier manipulation
         row_dict = row.asDict()
         text = row_dict.get("review")
-        if text:
+        language = row_dict.get("language")
+        if text and language != "english":
             data = {
                 "model": "llama3.1:8b",
                 "messages": [
@@ -53,9 +54,10 @@ def translate_review_batch(partition, api_url, api_headers):
             except Exception as e:
                 logger.error(f"Translation failed for text: {text}, Error: {e}")
                 row_dict["translated_review"] = None
+        elif language == "english":
+            row_dict["translated_review"] = text
         else:
             row_dict["translated_review"] = None
-
         translated_reviews.append(Row(**row_dict))
 
     return iter(translated_reviews)

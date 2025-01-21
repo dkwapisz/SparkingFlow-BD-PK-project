@@ -54,7 +54,7 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
                 "--source_path",
                 source_path,
                 "--num_partition",
-                "2500",
+                "250",
                 "--bronze_path",
                 bronze_path,
             ],
@@ -114,15 +114,6 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
     )
 
-    analytics_job = SparkSubmitOperator(
-        task_id="analytics",
-        conn_id="spark-conn",
-        application="jobs/python/analytics.py",
-        application_args=["--gold_path", gold_path],
-        dag=dag,
-        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
-    )
-
     end = PythonOperator(
         task_id="end",
         python_callable=lambda: print("Jobs completed successfully"),
@@ -144,8 +135,15 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
         partition_data_job >> translate_reviews_job >> include_games_data_job
     else:
         partition_data_job >> include_games_data_job
-
-    include_games_data_job >> save_to_db_job >> analytics_job >> end
+    analytics_job = SparkSubmitOperator(
+        task_id="analytics",
+        conn_id="spark-conn",
+        application="jobs/python/analytics.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+    (include_games_data_job >> save_to_db_job >> analytics_job >> end)
 
     return dag
 
@@ -164,10 +162,55 @@ def create_analytics_dag_own(dag_id):
         task_id="start", python_callable=lambda: print("Jobs started"), dag=dag
     )
 
-    analytics_job = SparkSubmitOperator(
-        task_id="analytics",
+    analytics_best_games_job = SparkSubmitOperator(
+        task_id="analytics_best_games_job",
         conn_id="spark-conn",
-        application="jobs/python/analytics.py",
+        application="jobs/python/best_games.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_most_reviews_job = SparkSubmitOperator(
+        task_id="analytics_most_reviews_job",
+        conn_id="spark-conn",
+        application="jobs/python/most_revies.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_casual_job = SparkSubmitOperator(
+        task_id="analytics_casual_job",
+        conn_id="spark-conn",
+        application="jobs/python/casual.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_most_user_job = SparkSubmitOperator(
+        task_id="analytics_most_user_job",
+        conn_id="spark-conn",
+        application="jobs/python/most_user.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_n_casual_job = SparkSubmitOperator(
+        task_id="analytics_n_casual_job",
+        conn_id="spark-conn",
+        application="jobs/python/top_n_cas.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_publishers_job = SparkSubmitOperator(
+        task_id="analytics_publishers_job",
+        conn_id="spark-conn",
+        application="jobs/python/top_publishers.py",
         application_args=["--gold_path", gold_path],
         dag=dag,
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
@@ -178,7 +221,18 @@ def create_analytics_dag_own(dag_id):
         python_callable=lambda: print("Jobs completed successfully"),
         dag=dag,
     )
-    start >> analytics_job >> end
+    (
+        start
+        >> [
+            analytics_best_games_job,
+            analytics_most_reviews_job,
+            analytics_casual_job,
+            analytics_most_user_job,
+            analytics_n_casual_job,
+            analytics_publishers_job,
+        ]
+        >> end
+    )
 
     return dag
 

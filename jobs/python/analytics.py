@@ -11,7 +11,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-output_path = args.gold_path
+output_path = "/opt/airflow/data/gold/"
 
 
 spark = (
@@ -61,7 +61,6 @@ def aggregate_gold_layer():
     # genres_table.createOrReplaceTempView("genres")
     regions_table.createOrReplaceTempView("regions")
 
-
     generate_best_games()
     generate_most_reviewed_games()
     generate_most_reviews_by_user()
@@ -69,32 +68,33 @@ def aggregate_gold_layer():
     generate_top_games_casual()
     generate_top_helpful_reviews()
     generate_top_games_publishers()
-
-    # print("Reviews by Genre:")
-    # spark.sql(
-    #     """
-    #     SELECT g.name AS genre_name, COUNT(r.review_id) AS review_count
-    #     FROM reviews r
-    #     JOIN games gm ON r.app_id = gm.app_id
-    #     JOIN genres g ON gm.genre_id = g.genre_id
-    #     GROUP BY g.name
-    #     ORDER BY review_count DESC
-    # """
-    # ).show()
-
-    # print("Reviews by Region:")
-    # spark.sql(
-    #     """
-    #     SELECT rg.name AS region_name, COUNT(r.review_id) AS review_count
-    #     FROM reviews r
-    #     JOIN users u ON r.user_id = u.user_id
-    #     JOIN regions rg ON u.region_id = rg.region_id
-    #     GROUP BY rg.name
-    #     ORDER BY review_count DESC
-    # """
-    # ).show()
+    generate_top_games_free()
+    generate_top_games_early_access()
 
 
+# print("Reviews by Genre:")
+# spark.sql(
+#     """
+#     SELECT g.name AS genre_name, COUNT(r.review_id) AS review_count
+#     FROM reviews r
+#     JOIN games gm ON r.app_id = gm.app_id
+#     JOIN genres g ON gm.genre_id = g.genre_id
+#     GROUP BY g.name
+#     ORDER BY review_count DESC
+# """
+# ).show()
+
+# print("Reviews by Region:")
+# spark.sql(
+#     """
+#     SELECT rg.name AS region_name, COUNT(r.review_id) AS review_count
+#     FROM reviews r
+#     JOIN users u ON r.user_id = u.user_id
+#     JOIN regions rg ON u.region_id = rg.region_id
+#     GROUP BY rg.name
+#     ORDER BY review_count DESC
+# """
+# ).show()
 
 
 def generate_best_games():
@@ -117,8 +117,9 @@ def generate_best_games():
         ylabel="Total Recommended Votes",
         output_path=output_path + "Best Games",
         games=best_games.limit(3),
-        selected_name="app_name"
+        selected_name="app_name",
     )
+
 
 def generate_most_reviewed_games():
     most_res = spark.sql(
@@ -141,8 +142,9 @@ def generate_most_reviewed_games():
         ylabel="Total Reviewes",
         output_path=output_path + "Most reviewed Games",
         games=most_res.limit(3),
-        selected_name="app_name"
+        selected_name="app_name",
     )
+
 
 def generate_most_reviews_by_user():
     most_user = spark.sql(
@@ -165,8 +167,9 @@ def generate_most_reviews_by_user():
         ylabel="Most Reviews",
         output_path=output_path + "Most reviewes by user",
         games=most_user.limit(3),
-        selected_name="user_id"
+        selected_name="user_id",
     )
+
 
 def generate_top_games_non_casual():
     print("Top games non-casual users:")
@@ -191,8 +194,9 @@ def generate_top_games_non_casual():
         ylabel="Most non casual gamers",
         output_path=output_path + "Most popular non casual gamers",
         games=non_cas.limit(3),
-        selected_name="app_name"
+        selected_name="app_name",
     )
+
 
 def generate_top_games_casual():
     print("Top games casual users:")
@@ -217,8 +221,61 @@ def generate_top_games_casual():
         ylabel="Most casual gamers",
         output_path=output_path + "Most popular casual gamers",
         games=casual.limit(3),
-        selected_name="app_name"
+        selected_name="app_name",
     )
+
+
+def generate_top_games_early_access():
+    print("Top games early access:")
+    casual = spark.sql(
+        """
+        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND r.written_during_early_access='True' THEN 1 ELSE 0 END) AS counted
+        FROM reviews r
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    casual.show()
+    casual.toPandas().to_csv(
+        output_path + "Most popular early access.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Most popular early access - Podium",
+        ylabel="Most popular early access games",
+        output_path=output_path + "Most popular early access",
+        games=casual.limit(3),
+        selected_name="app_name",
+    )
+
+
+def generate_top_games_free():
+    print("Top games free:")
+    casual = spark.sql(
+        """
+        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND r.received_for_free='True' THEN 1 ELSE 0 END) AS counted
+        FROM reviews r
+        JOIN games g ON r.app_id = g.app_id
+        GROUP BY g.app_name
+        ORDER BY counted DESC
+        LIMIT 10
+    """
+    )
+    casual.show()
+    casual.toPandas().to_csv(
+        output_path + "Most popular free.csv",
+        header=True,
+    )
+    generate_games_chart(
+        title="Top 3 Most popular recieved for free - Podium",
+        ylabel="Most popular received for free",
+        output_path=output_path + "Most popular received for free",
+        games=casual.limit(3),
+        selected_name="app_name",
+    )
+
 
 def generate_top_helpful_reviews():
     print("Top games casual users:")
@@ -242,6 +299,7 @@ def generate_top_helpful_reviews():
     #     games=most_helpful.limit(3),
     #     selected_name="review"
     # )
+
 
 def generate_top_games_publishers():
     print("Top games publishers:")
@@ -273,8 +331,9 @@ def generate_top_games_publishers():
         ylabel="Top games publishers",
         output_path=output_path + "Top games publishers",
         games=publishers.limit(3),
-        selected_name="publisher"
+        selected_name="publisher",
     )
+
 
 def generate_games_chart(title, ylabel, output_path, games, selected_name):
     directory = os.path.dirname(output_path)
@@ -307,7 +366,6 @@ def generate_games_chart(title, ylabel, output_path, games, selected_name):
     lower_limit = min_vote * 0.75
     upper_limit = max_vote * 1.25
     ax.set_ylim(lower_limit, upper_limit)
-
 
     ax.set_xticks(positions)
     ax.set_xticklabels(game_names)
