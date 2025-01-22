@@ -1,12 +1,8 @@
 import argparse
-from pyspark.sql import SparkSession
-from pyspark.sql import DataFrame
-import matplotlib.pyplot as plt
-import os
-from analytics import generate_games_chart, initialize_spark
+from analytics import initialize_spark, generate_games_chart
 
 
-def generate_best_games(spark, output_path):
+def generate_top_games_early_access(spark, output_path):
     jdbc_url = "jdbc:postgresql://postgres/airflow"
     properties = {
         "user": "airflow",
@@ -29,9 +25,9 @@ def generate_best_games(spark, output_path):
     users_table.createOrReplaceTempView("users")
     # genres_table.createOrReplaceTempView("genres")
     regions_table.createOrReplaceTempView("regions")
-    best_games = spark.sql(
+    early_access = spark.sql(
         """
-        SELECT g.app_name, SUM(CASE WHEN recommended='True' THEN 1 ELSE 0 END) AS counted
+        SELECT g.app_name, SUM(CASE WHEN r.recommended='True' AND r.written_during_early_access='True' THEN 1 ELSE 0 END) AS counted
         FROM reviews r
         JOIN games g ON r.app_id = g.app_id
         GROUP BY g.app_name
@@ -39,14 +35,16 @@ def generate_best_games(spark, output_path):
         LIMIT 10
         """
     )
-    best_games.show()
-    best_games.toPandas().to_csv(output_path + "/Best Games.csv", header=True)
+    early_access.show()
+    early_access.toPandas().to_csv(
+        output_path + "/Top Games Early Access.csv", header=True
+    )
 
     generate_games_chart(
-        title="Top 3 Best Games - Podium",
-        ylabel="Total Recommended Votes",
-        output_path=output_path + "/Best Games.png",
-        games=best_games.limit(3),
+        title="Top 3 Early Access Games - Podium",
+        ylabel="Recommendations in Early Access",
+        output_path=output_path + "/Top Games Early Access.png",
+        games=early_access.limit(3),
         selected_name="app_name",
     )
 
@@ -58,4 +56,4 @@ parser.add_argument(
 args = parser.parse_args()
 output_path = args.gold_path
 spark = initialize_spark()
-generate_best_games(spark, output_path)
+generate_top_games_early_access(spark, output_path)

@@ -1,12 +1,8 @@
 import argparse
-from pyspark.sql import SparkSession
-from pyspark.sql import DataFrame
-import matplotlib.pyplot as plt
-import os
-from analytics import generate_games_chart, initialize_spark
+from analytics import initialize_spark
 
 
-def generate_best_games(spark, output_path):
+def generate_top_helpful_reviews(spark, output_path):
     jdbc_url = "jdbc:postgresql://postgres/airflow"
     properties = {
         "user": "airflow",
@@ -29,25 +25,18 @@ def generate_best_games(spark, output_path):
     users_table.createOrReplaceTempView("users")
     # genres_table.createOrReplaceTempView("genres")
     regions_table.createOrReplaceTempView("regions")
-    best_games = spark.sql(
+    most_helpful = spark.sql(
         """
-        SELECT g.app_name, SUM(CASE WHEN recommended='True' THEN 1 ELSE 0 END) AS counted
+        SELECT r.translated_review, g.app_name, r.votes_helpful AS counted
         FROM reviews r
         JOIN games g ON r.app_id = g.app_id
-        GROUP BY g.app_name
         ORDER BY counted DESC
         LIMIT 10
         """
     )
-    best_games.show()
-    best_games.toPandas().to_csv(output_path + "/Best Games.csv", header=True)
-
-    generate_games_chart(
-        title="Top 3 Best Games - Podium",
-        ylabel="Total Recommended Votes",
-        output_path=output_path + "/Best Games.png",
-        games=best_games.limit(3),
-        selected_name="app_name",
+    most_helpful.show()
+    most_helpful.toPandas().to_csv(
+        output_path + "/Top Helpful Reviews.csv", header=True
     )
 
 
@@ -58,4 +47,4 @@ parser.add_argument(
 args = parser.parse_args()
 output_path = args.gold_path
 spark = initialize_spark()
-generate_best_games(spark, output_path)
+generate_top_helpful_reviews(spark, output_path)
