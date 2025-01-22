@@ -21,7 +21,7 @@ df = spark.read.csv(input_path, header=True, multiLine=True, quote='"', escape='
 
 df = df.coalesce(1)
 
-df.write.csv(output_path, header=True, quote='"', escape='"', mode="overwrite")
+df.write.parquet(output_path, mode="overwrite")
 
 print("Loaded games to Bronze layer")
 

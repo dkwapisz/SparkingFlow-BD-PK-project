@@ -4,7 +4,7 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.appName("LoadSample").getOrCreate()
 
-parser = argparse.ArgumentParser(description="Split CSV into smaller partitions")
+parser = argparse.ArgumentParser(description="Split Parquet into smaller partitions")
 parser.add_argument(
     "--source_path", type=str, required=True, help="Path to the source directory"
 )
@@ -34,8 +34,8 @@ df_first_partition = spark.createDataFrame(first_partition[0], df_repartitioned.
 
 df_first_partition = df_first_partition.coalesce(1)
 
-df_first_partition.write.csv(
-    output_path, header=True, quote='"', escape='"', mode="overwrite"
+df_first_partition.write.parquet(
+    output_path, mode="overwrite"
 )
 
 print("Repartitioning completed")

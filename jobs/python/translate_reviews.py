@@ -36,19 +36,21 @@ def translate_review_batch(partition, api_url, api_headers):
         row_dict = row.asDict()
         text = row_dict.get("review")
         if text:
-            data = {
-                "model": "llama3.1:8b",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": f"only translate to english without any additional explanation: {text}",
-                    }
-                ],
-                "stream": False,
-            }
+            # data = {
+            #     "model": "llama3.1:8b",
+            #     "messages": [
+            #         {
+            #             "role": "user",
+            #             "content": f"only translate to english without any additional explanation: {text}",
+            #         }
+            #     ],
+            #     "stream": False,
+            # }
             try:
-                response = requests.post(api_url, json=data, headers=api_headers).json()
-                translated_text = response["message"]["content"]
+                # response = requests.post(api_url, json=data, headers=api_headers).json()
+                # translated_text = response["message"]["content"]
+                response = {"message": {"content": text}}           # turn off translation
+                translated_text = response["message"]["content"]    # turn off translation
                 row_dict["translated_review"] = translated_text
             except Exception as e:
                 logger.error(f"Translation failed for text: {text}, Error: {e}")
@@ -72,11 +74,11 @@ languages = [
 
 for language in languages:
     language_path = os.path.join(input_path, language)
-    csv_files = [f for f in os.listdir(language_path) if f.endswith(".csv")]
-    for csv_file in csv_files:
-        csv_path = os.path.join(language_path, csv_file)
-        df = spark.read.csv(
-            csv_path, header=True, multiLine=True, quote='"', escape='"'
+    parquet_files = [f for f in os.listdir(language_path) if f.endswith(".parquet")]
+    for parquet_file in parquet_files:
+        parquet_path = os.path.join(language_path, parquet_file)
+        df = spark.read.parquet(
+            parquet_path
         )
 
         # Translate reviews and retain all original columns
@@ -88,12 +90,8 @@ for language in languages:
         translated_df = translated_reviews_rdd.toDF()
 
         # Save the translated file
-        translated_df.write.csv(
-            f"{output_path}/original_{language}",
-            header=True,
-            quote='"',
-            escape='"',
-            mode="overwrite",
+        translated_df.write.parquet(
+            f"{output_path}/original_{language}", mode="overwrite"
         )
 
 spark.stop()

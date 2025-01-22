@@ -17,8 +17,8 @@ args = parser.parse_args()
 input_path = args.bronze_path + "games"
 output_path = args.silver_path + "games"
 
-games_df = spark.read.csv(
-    input_path, header=True, multiLine=True, quote='"', escape='"'
+games_df = spark.read.parquet(
+    input_path
 )
 normalized_games = games_df.select(
     col("AppID").alias("game_id"),
@@ -31,7 +31,7 @@ normalized_games = games_df.select(
     col("Publishers").alias("publishers"),
 )
 
-normalized_games.repartition(10).write.csv(
-    output_path, header=True, quote='"', escape='"', mode="overwrite"
+normalized_games.repartition(10).write.parquet(
+    output_path, mode="overwrite"
 )
 spark.stop()
