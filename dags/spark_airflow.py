@@ -114,10 +114,64 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
     )
 
-    analytics_job = SparkSubmitOperator(
-        task_id="analytics",
+    analytics_best_games = SparkSubmitOperator(
+        task_id="analyze_best_games",
         conn_id="spark-conn",
-        application="jobs/python/analytics.py",
+        application="jobs/python/analyze_best_games.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_most_reviewed_game = SparkSubmitOperator(
+        task_id="analyze_most_reviewed_game",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_most_reviewed_game.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_most_reviews_by_user = SparkSubmitOperator(
+        task_id="analyze_most_reviews_by_user",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_most_reviews_by_user.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_top_games_casual = SparkSubmitOperator(
+        task_id="analyze_top_games_casual",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_top_games_casual.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_top_games_non_casual = SparkSubmitOperator(
+        task_id="analyze_top_games_non_casual",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_top_games_non_casual.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_top_games_publishers = SparkSubmitOperator(
+        task_id="analyze_top_games_publishers",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_top_games_publishers.py",
+        application_args=["--gold_path", gold_path],
+        dag=dag,
+        jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
+    )
+
+    analytics_top_helpful_reviews = SparkSubmitOperator(
+        task_id="analyze_top_helpful_reviews",
+        conn_id="spark-conn",
+        application="jobs/python/analyze_top_helpful_reviews.py",
         application_args=["--gold_path", gold_path],
         dag=dag,
         jars="/opt/airflow/jars/postgresql-42.2.29.jre7.jar",
@@ -130,12 +184,10 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
     )
 
     if job_type == "sample":
-        start >> health_check >> load_sample_job >> load_games_to_bronze_job
-        load_games_to_bronze_job >> partition_data_job
+        start >> health_check >> [load_sample_job, load_games_to_bronze_job] >> partition_data_job
 
     elif job_type == "full":
-        start >> health_check >> load_full_job >> load_games_to_bronze_job
-        load_games_to_bronze_job >> partition_data_job
+        start >> health_check >> [load_full_job, load_games_to_bronze_job] >> partition_data_job
 
     else:
         start >> health_check >> partition_data_job
@@ -145,7 +197,10 @@ def create_dag_own(dag_id, job_type, translate: bool, no_parts="80"):
     else:
         partition_data_job >> include_games_data_job
 
-    include_games_data_job >> save_to_db_job >> analytics_job >> end
+    include_games_data_job >> save_to_db_job >> [analytics_best_games,
+                                                 analytics_top_games_casual, analytics_top_games_publishers,
+                                                 analytics_top_games_non_casual, analytics_most_reviewed_game,
+                                                 analytics_most_reviews_by_user, analytics_top_helpful_reviews] >> end
 
     return dag
 
